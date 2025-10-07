@@ -1,0 +1,23 @@
+package afifo_pkg;
+`include "uvm_pkg.sv"
+`include "uvm_macros.svh"
+`include "afifo_wseq_item.sv"
+`include "afifo_rseq_item.sv"
+`include "afifo_w_sequencer.sv"
+`include "afifo_r_sequencer.sv"
+`include "afifo_w_sequence.sv"
+`include "afifo_r_sequence.sv"
+`include "virtual_sequencer.sv"
+`include "virtual_sequence.sv"
+`include "afifo_w_driver.sv"
+`include "afifo_r_driver.sv"
+`include "afifo_w_monitor.sv"
+`include "afifo_r_monitor.sv"
+`include "afifo_w_agent.sv"
+`include "afifo_r_agent.sv"
+`include "afifo_scoreboard.sv"
+`include "afifo_subscriber.sv"
+`include "afifo_environment.sv"
+`include "afifo_test.sv"
+
+endpackage
