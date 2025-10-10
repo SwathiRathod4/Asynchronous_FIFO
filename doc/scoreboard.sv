@@ -8,6 +8,7 @@ class afifo_scoreboard extends uvm_scoreboard;
   
   bit [7:0] w_fifo[$];
   bit [7:0] r_fifo[$];
+  bit[7:0] wdata,rdata;
   
   afifo_wseq_item wseq;
   afifo_rseq_item rseq;
@@ -20,73 +21,55 @@ class afifo_scoreboard extends uvm_scoreboard;
   
   virtual task run_phase(uvm_phase phase);
     super.run_phase(phase);
+    forever begin
+    sco_wport.get(wseq);
+    sco_rport.get(rseq);
     
-    
-    fork
-      forever begin
-        sco_wport.get(wseq);
-
-        // Check if FIFO is full
-        if (r_fifo.size() == `depth) begin
-          $display("fifo size=%d",r_fifo.size());
-          if (wseq.wfull==0) begin
-            `uvm_error("SCOREBOARD", $sformatf("DUT did not assert wfull when FIFO is full wfull=%d",wseq.wfull));
-          end else begin
-            `uvm_info("SCOREBOARD", "WRITE blocked due to FIFO full (as expected)", UVM_LOW);
-          end
-        end 
-        
-        else begin
-          w_fifo.push_back(wseq.wdata);
-          `uvm_info("SCOREBOARD", $sformatf("Collected WDATA = %0d", wseq.wdata), UVM_LOW);
-        end
-
-        //compare_if_possible();
-      end
-
+      compute(wseq,rseq);
       
-      forever begin
-        sco_rport.get(rseq);
-
-        // Check if FIFO is empty
-        if (w_fifo.size() == 0) begin
-          if (!rseq.rempty) begin
-            `uvm_error("SCOREBOARD", "DUT did not assert rempty when FIFO is empty");
-          end else begin
-            `uvm_info("SCOREBOARD", "READ blocked due to FIFO empty (as expected)", UVM_LOW);
-          end
-        end else begin
+    end
+  endtask
+    
+  task compute(afifo_wseq_item wseq,afifo_rseq_item rseq);
+    if(wseq.winc)begin
+      
+      if(w_fifo.size()==`depth)begin
+        if (wseq.wfull==0) begin
+            `uvm_error("SCOREBOARD", $sformatf("DUT did not assert wfull when FIFO is full wfull=%d",wseq.wfull));end
+           else begin
+             `uvm_info("SCOREBOARD", "WRITE blocked due to FIFO full (as expected)", UVM_LOW);end
+          
+      end
+      else begin
+          w_fifo.push_back(wseq.wdata);
+        `uvm_info("SCOREBOARD", $sformatf("Collected WDATA = %0d", wseq.wdata), UVM_LOW);
+    end
+    end
+    if(rseq.rinc)begin
+      if(w_fifo.size()==0)begin
+        if (!rseq.rempty) begin
+          `uvm_error("SCOREBOARD", "DUT did not assert rempty when FIFO is empty");end
+          
+      else begin
+        `uvm_info("SCOREBOARD", "READ blocked due to FIFO empty (as expected)", UVM_LOW);end
+          
+    end
+   else begin
           r_fifo.push_back(rseq.rdata);
           `uvm_info("SCOREBOARD", $sformatf("Collected RDATA = %0d", rseq.rdata), UVM_LOW);
-        end
- $display("fifo size=%d",r_fifo.size());
-        //compare_if_possible();
-      end
-    join
-  endtask
-  
-    virtual function void check_phase(uvm_phase phase);
-       int w_size = w_fifo.size();
-    int r_size = r_fifo.size();
-    super.check_phase(phase);
-
- 
-
-//     if (w_size != r_size) begin
-//       `uvm_error("SCOREBOARD", $sformatf("Mismatch in transaction count: write=%0d, read=%0d", w_size, r_size));
-//       return;
-//     end
-
-      for (int i = 0; i < `no_of_transactions; i++) begin
         
-      bit [7:0] wdata = w_fifo[i];
-      bit [7:0] rdata = r_fifo[i];
-        
-
-      if (wdata === rdata) begin
-        `uvm_info("SCOREBOARD", $sformatf("MATCH: index=%0d, wdata=%0d, rdata=%0d", i, wdata, rdata), UVM_LOW);end
+   
+    
+    wdata=w_fifo.pop_front();
+     rdata=r_fifo.pop_front();
+    if(wdata==rdata)
+      begin
+     `uvm_info("SCOREBOARD", $sformatf("MATCH:, wdata=%0d, rdata=%0d", wdata, rdata), UVM_LOW);end
       else begin
-        `uvm_error("SCOREBOARD", $sformatf("MISMATCH: index=%0d, wdata=%0d, rdata=%0d", i, wdata, rdata));end
+        `uvm_error("SCOREBOARD", $sformatf("MISMATCH: , wdata=%0d, rdata=%0d", wdata, rdata));end
     end
-  endfunction
+    end
+  endtask 
 endclass
+    
+
